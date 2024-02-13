@@ -5,26 +5,34 @@ import (
 	"flag"
 	"fmt"
 	"os"
+
+	gostr "github.com/inventor500/go-strings"
 )
 
-func getArgs() (int, string) {
+var Length int
+var Separator string
+
+func getArgs() string {
 	length := flag.Int("length", 10, "The minimum length of a string")
+	separator := flag.String("output-separator", "\n", "The separator to divide matches. Default is the new line character.")
 	flag.Parse()
 	if len(flag.Args()) != 1 {
 		panic("Requires exactly one file")
 	}
-	return *length, flag.Args()[0]
+	Length = *length
+	Separator = *separator
+	return flag.Args()[0]
 }
 
 func main() {
-	length, filename := getArgs()
+	filename := getArgs()
 	file, err := os.Open(filename)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
-	var container StringContainer
-	container.Length = length
+	var container gostr.StringContainer
+	container.Length = Length
 	reader := bufio.NewReader(file)
 	for {
 		b, err := reader.ReadByte()
@@ -37,12 +45,12 @@ func main() {
 		}
 		if !container.ReadNextChar(b) {
 			if container.GetCurrentLength() > container.Length {
-				fmt.Println(container.GetString())
+				fmt.Printf("%s%s", container.GetString(), Separator)
 			}
 			container.Reset()
 		}
 	}
 	if container.GetCurrentLength() >= container.Length {
-		fmt.Println(container.GetString())
+		fmt.Printf("%s%s", container.GetString(), Separator)
 	}
 }
