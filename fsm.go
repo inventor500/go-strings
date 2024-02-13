@@ -1,7 +1,9 @@
 package strings
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -10,18 +12,35 @@ import (
 // (normal) -> ReadNextChar(not ASCII_Char) -> (ready to reset)
 // (ready to reset) -> Reset() -> (normal)
 // (ready to reset) -> GetString() -> (ready to reset)
-// It relies on the calling code to call the right functions, though
-type Container interface {
-	Reset()
-	ReadNextChar(byte) bool
-	GetString() string
-	GetCurrentLength() int
-}
-
+// Use StringContainer.Read to read from an io.Reader and write to an io.Writer
 type StringContainer struct {
 	Chars strings.Builder
 	// Position is at the next place in the array to insert.
 	Length int
+}
+
+func (s *StringContainer) Read(separator string, r io.Reader, w io.Writer) error {
+	reader := bufio.NewReader(r)
+	for {
+		b, err := reader.ReadByte()
+		if err != nil {
+			err_str := fmt.Sprintf("%s", err)
+			if err_str != "EOF" {
+				return err
+			}
+			break
+		}
+		if !s.ReadNextChar(b) {
+			if s.GetCurrentLength() > s.Length {
+				fmt.Fprintf(w, "%s%s", s.GetString(), separator)
+			}
+			s.Reset()
+		}
+	}
+	if s.GetCurrentLength() >= s.Length {
+		fmt.Fprintf(w, "%s%s", s.GetString(), separator)
+	}
+	return nil
 }
 
 func (s StringContainer) String() string {
