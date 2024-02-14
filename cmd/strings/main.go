@@ -8,10 +8,7 @@ import (
 	gostr "github.com/inventor500/go-strings"
 )
 
-var Length int
-var Separator string
-
-func getArgs() string {
+func getArgs() (string, int, string) {
 	length := flag.Int("length", 10, "The minimum length of a string")
 	separator := flag.String("output-separator", "\n", "The separator to divide matches")
 	flag.Parse()
@@ -20,20 +17,21 @@ func getArgs() string {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
-	Length = *length
-	Separator = *separator
-	return flag.Args()[0]
+	return flag.Args()[0], *length, *separator
 }
 
 func main() {
-	filename := getArgs()
+	filename, length, separator := getArgs()
 	file, err := os.Open(filename)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
 	var container = gostr.StringContainer{
-		Length: Length,
+		Length: length,
 	}
-	container.Read(Separator, file, os.Stdout)
+	container.Read(separator, file, os.Stdout)
+	if separator[len(separator)-1] != '\n' {
+		fmt.Println()
+	}
 }

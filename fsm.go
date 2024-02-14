@@ -19,8 +19,13 @@ type StringContainer struct {
 	Length int
 }
 
+func writeString(separator string, w *bufio.Writer, str string) {
+	w.WriteString(str + separator)
+}
+
 func (s *StringContainer) Read(separator string, r io.Reader, w io.Writer) error {
 	reader := bufio.NewReader(r)
+	writer := bufio.NewWriter(w)
 	for {
 		b, err := reader.ReadByte()
 		if err != nil {
@@ -32,14 +37,15 @@ func (s *StringContainer) Read(separator string, r io.Reader, w io.Writer) error
 		}
 		if !s.ReadNextChar(b) {
 			if s.GetCurrentLength() > s.Length {
-				fmt.Fprintf(w, "%s%s", s.GetString(), separator)
+				writeString(separator, writer, s.GetString())
 			}
 			s.Reset()
 		}
 	}
 	if s.GetCurrentLength() >= s.Length {
-		fmt.Fprintf(w, "%s%s", s.GetString(), separator)
+		writeString(separator, writer, s.GetString())
 	}
+	writer.Flush()
 	return nil
 }
 
@@ -49,7 +55,6 @@ func (s StringContainer) String() string {
 
 // Get the stored value
 func (s StringContainer) GetString() string {
-	// return fmt.Sprintf("%x: %s", s.StartingPosition, s.Chars.String())
 	return s.Chars.String()
 }
 
@@ -64,7 +69,6 @@ func (s *StringContainer) ReadNextChar(b byte) bool {
 	// Normal ASCII letters
 	// Carriage return and line feed do not count
 	if b >= 0x20 && b <= 0x7E {
-		// if b >= 0x20 && b <= 0x7E {
 		s.Chars.WriteByte(b)
 		return true
 	} else {
