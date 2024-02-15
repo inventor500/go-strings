@@ -36,7 +36,7 @@ func (s *StringContainer) Read(separator string, r io.Reader, w io.Writer) error
 			break
 		}
 		if !s.ReadNextChar(b) {
-			if s.GetCurrentLength() > s.Length {
+			if s.GetCurrentLength() >= s.Length {
 				writeString(separator, writer, s.GetString())
 			}
 			s.Reset()
