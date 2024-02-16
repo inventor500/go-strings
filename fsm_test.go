@@ -2,6 +2,7 @@ package strings
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -13,24 +14,27 @@ func writeTestString(str string, container *StringContainer) {
 	}
 }
 
+// FIXME: This needs updating from when Read became a higher-order function
 func TestRead(t *testing.T) {
-	test_string := "abcdefg"
-	input := strings.NewReader(test_string)
+	testString := "abcdefg"
+	input := strings.NewReader(testString)
 	output := new(bytes.Buffer)
+	testWriter := func(str string, pos uint64) { fmt.Fprintf(output, "%x %s\n", pos, str) }
 	container := StringContainer{}
-	container.Read("\n", input, output)
+	container.Read(testWriter, input)
 	result := output.String()
-	if result != test_string+"\n" {
-		t.Errorf("Expected '%s', got '%s'", test_string+"\n", result)
+	expected := fmt.Sprintf("0 %s\n", testString)
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
 	}
 	// Next test
 	container.Reset()
-	test_string = "abcdefg" + string(rune(0x19)) + "hijklmnop"
-	input = strings.NewReader(test_string)
+	testString = "abcdefg" + string(rune(0x19)) + "hijklmnop"
+	input = strings.NewReader(testString)
 	output = new(bytes.Buffer)
-	container.Read("\n", input, output)
+	container.Read(testWriter, input)
 	result = output.String()
-	expected_string := "abcdefg\nhijklmnop\n"
+	expected_string := "0 abcdefg\n8 hijklmnop\n"
 	if result != expected_string {
 		t.Errorf("Expected '%s', got '%s'", expected_string, result)
 	}
@@ -38,18 +42,18 @@ func TestRead(t *testing.T) {
 
 func TestGetString(t *testing.T) {
 	container := StringContainer{}
-	test_string := "abcdefg"
-	writeTestString(test_string, &container)
+	testString := "abcdefg"
+	writeTestString(testString, &container)
 	result := container.GetString()
-	if result != test_string {
-		t.Errorf("Expected %s, got %s", test_string, result)
+	if result != testString {
+		t.Errorf("Expected %s, got %s", testString, result)
 	}
 }
 
 func TestReset(t *testing.T) {
 	container := StringContainer{}
-	test_string := "abcdefg"
-	writeTestString(test_string, &container)
+	testString := "abcdefg"
+	writeTestString(testString, &container)
 	container.Reset()
 	result := container.GetString()
 	if result != "" {
@@ -59,27 +63,27 @@ func TestReset(t *testing.T) {
 
 func TestReadNextChar(t *testing.T) {
 	container := StringContainer{}
-	test_string := "abcdefg"
-	writeTestString(test_string, &container)
+	testString := "abcdefg"
+	writeTestString(testString, &container)
 	// Before reading invalid characters
 	result := container.GetString()
-	if result != test_string {
-		t.Errorf("Expected %s, got %s", test_string, result)
+	if result != testString {
+		t.Errorf("Expected %s, got %s", testString, result)
 	}
 	container.ReadNextChar(0x7F)
 	container.ReadNextChar(0x19)
 	// After reading invalid characters
 	result = container.GetString()
-	if result != test_string {
-		t.Errorf("Expected %s, got %s", test_string, result)
+	if result != testString {
+		t.Errorf("Expected %s, got %s", testString, result)
 	}
 }
 
 func TestCurrentLength(t *testing.T) {
 	container := StringContainer{}
-	test_string := "abcdefg"
-	for i := 0; i < len(test_string); i++ {
-		container.ReadNextChar(test_string[i])
+	testString := "abcdefg"
+	for i := 0; i < len(testString); i++ {
+		container.ReadNextChar(testString[i])
 		length := container.GetCurrentLength()
 		if length != i+1 {
 			t.Errorf("Expected length %d, got lenth %d. Current string: %s", i+1, length, container.GetString())
