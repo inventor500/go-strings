@@ -111,9 +111,6 @@ func createWriter(separator string, format byte, output *bufio.Writer) func(stri
 func createTester(includeWhitespace bool) func(byte) bool {
 	return func(b byte) bool {
 		// 0x9 is tab, 0x12 is line feed, 0x13 is carriage return
-		if ((b >= 0x20 && b <= 0x7E) || b == 0x9) || (includeWhitespace && (b == 0x12 || b == 0x15)) {
-			return true
-		}
-		return false
+		return ((b >= 0x20 && b <= 0x7E) || b == 0x9) || (includeWhitespace && (b == 0x12 || b == 0x15))
 	}
 }
