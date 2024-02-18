@@ -1,6 +1,6 @@
-# go-strings
+# strings
 
-go-strings prints out ASCII strings found in a binary file. This is *mostly* POSIX-compatible.
+`strings` prints out ASCII strings found in a binary file. This is a *mostly* POSIX-compatible implementation.
 
 The `strings` command is extraordinarily useful for finding information in binary files. Many file formats include metadata in plain text, even when the rest of the file is binary. Possible use-cases include:
 * Finding PDF and other document metadata
@@ -31,3 +31,4 @@ Regardless of output separator, a new line will be printed at the end.
 * `-w` enables counting new lines (whitespace) as valid characters.
   * Keep in mind that printing a carriage return to `stdout` may have the unintended consequence of overwriting some text if the immediate next character is not a line feed.
   * This flag is best used in conjunction with `--output-separator` to differentiate between new lines and separators.
+* If the input file is "`-`", then strings will read from standard input instead of from a file. If you really want to read from a file named "`-`", use "`./-`" instead.
