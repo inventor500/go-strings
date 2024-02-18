@@ -18,7 +18,7 @@ type StringContainer struct {
 	Length int
 }
 
-func (s *StringContainer) Read(printer func(string, uint64), r io.Reader) error {
+func (s *StringContainer) Read(printer func(string, uint64), tester func(byte) bool, r io.Reader) error {
 	var position uint64
 	reader := bufio.NewReader(r)
 	for {
@@ -30,9 +30,10 @@ func (s *StringContainer) Read(printer func(string, uint64), r io.Reader) error 
 			}
 			break
 		}
-		// KLUDGE: There should be a better way to do this
+		// KLUDGE: There should be a better way to track position
 		position++
-		if !s.ReadNextChar(b) {
+		// If another byte cannot be added to the string, then print (if possible) and reset
+		if !s.ReadNextChar(b, tester) { // Byte is invalid
 			if s.GetCurrentLength() >= s.Length {
 				printer(s.GetString(), position-uint64(s.GetCurrentLength())-1)
 			}
@@ -40,7 +41,7 @@ func (s *StringContainer) Read(printer func(string, uint64), r io.Reader) error 
 		}
 	}
 	if s.GetCurrentLength() >= s.Length {
-		// The lack of a '-1' here prevents an overflow
+		// The lack of a '-1' here prevents an off-by-one error
 		printer(s.GetString(), position-uint64(s.GetCurrentLength()))
 	}
 	return nil
@@ -61,20 +62,17 @@ func (s *StringContainer) Reset() {
 	s.Chars.Reset()
 }
 
-// If the byte is a valid part of a string, then add it to the string and return true
-// Otherwide, return false (StringContainer is ready to print and reset)
-func (s *StringContainer) ReadNextChar(b byte) bool {
-	// TODO: Take test funtion as parameter?
-	// Normal ASCII letters
-	// Carriage return and line feed do not count
-	if b >= 0x20 && b <= 0x7E {
-		s.Chars.WriteByte(b)
-		return true
-	} else {
-		return false
-	}
-}
-
+// Get the current string length stored in the StringContainer
 func (s StringContainer) GetCurrentLength() int {
 	return s.Chars.Len()
+}
+
+// If the byte is a valid part of a string, then add it to the string
+// Otherwide, StringContainer is ready to print and reset
+func (s *StringContainer) ReadNextChar(b byte, tester func(byte) bool) bool {
+	if tester(b) {
+		s.Chars.WriteByte(b)
+		return true
+	}
+	return false
 }
