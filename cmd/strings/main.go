@@ -12,7 +12,16 @@ import (
 )
 
 func main() {
-	filename, length, separator, radix, whitespace := getArgs()
+	os.Exit(mainFunction())
+}
+
+func mainFunction() int {
+	filename, length, separator, radix, whitespace, err := getArgs()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Usage: %s [args] filename\n", os.Args[0])
+		flag.PrintDefaults()
+		return 1
+	}
 	var file *os.File
 	if filename == "-" {
 		file = os.Stdin
@@ -22,7 +31,7 @@ func main() {
 		if err != nil {
 			// Error should String() to "open <filename>: <error description>"
 			fmt.Fprintf(os.Stderr, "Failed to %s\n", err)
-			os.Exit(1)
+			return 1
 		}
 		// We do not need to close os.Stdout
 		defer file.Close()
@@ -31,15 +40,25 @@ func main() {
 		Length: length,
 	}
 	output := bufio.NewWriter(os.Stdout)
-	container.Read(createWriter(separator, radix, output), createTester(whitespace), file)
+	writer, err := createWriter(separator, radix, output)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		return 1
+	}
+	err = container.Read(writer, createTester(whitespace), file)
 	output.Flush()
 	// Make sure that this ends in a new line
 	if separator[len(separator)-1] != '\n' {
 		fmt.Println()
 	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error printing output: %s\n", err)
+		return 1
+	}
+	return 0
 }
 
-func getArgs() (string, int, string, byte, bool) {
+func getArgs() (string, int, string, byte, bool, error) {
 	// 4 is the POSIX-specified default
 	length := flag.Int("n", 4, "The minimum length of a string")
 	separator := flag.String("output-separator", "\n", "The separator to divide matches")
@@ -52,14 +71,10 @@ func getArgs() (string, int, string, byte, bool) {
 		radix_evaluated = strings.ToLower(*radix)[0]
 	}
 	if len(flag.Args()) == 1 {
-		return flag.Args()[0], *length, *separator, radix_evaluated, *includeWhitespace
+		return flag.Args()[0], *length, *separator, radix_evaluated, *includeWhitespace, nil
 	} else {
-		fmt.Fprintf(os.Stderr, "Usage: %s [args] filename\n", os.Args[0])
-		flag.PrintDefaults()
-		os.Exit(1)
+		return "", 0, "", 0, false, fmt.Errorf("")
 	}
-	// Will never reach here...
-	return "", 0, "", 0, false
 }
 
 // Check if POSIXLY_CORRECT or POSIX_ME_HARDER are set
@@ -75,10 +90,10 @@ func isPosix() bool {
 }
 
 // Create a writer
-func createWriter(separator string, format byte, output *bufio.Writer) func(string, uint64) {
+func createWriter(separator string, format byte, output *bufio.Writer) (func(string, uint64), error) {
 	// This is the only case where the number of required elements changes
 	if format == 0 {
-		return func(str string, _ uint64) { fmt.Fprintf(output, "%s%s", str, separator) }
+		return func(str string, _ uint64) { fmt.Fprintf(output, "%s%s", str, separator) }, nil
 	}
 	// POSIX requires we not print 0x or 0o
 	printIndicator := !isPosix()
@@ -99,13 +114,11 @@ func createWriter(separator string, format byte, output *bufio.Writer) func(stri
 			formatString = "%o %s%s"
 		}
 	default:
-		fmt.Fprintf(os.Stderr, "Invalid radix %v", format)
-		// TODO: Does this leave the input file unclosed?
-		os.Exit(1)
+		return nil, fmt.Errorf("invalid radix: '%c'", format)
 	}
 	return func(str string, position uint64) {
 		fmt.Fprintf(output, formatString, position, str, separator)
-	}
+	}, nil
 }
 
 func createTester(includeWhitespace bool) func(byte) bool {
